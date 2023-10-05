@@ -1,0 +1,8 @@
+{
+  "name": "Pipewire extension",
+  "description": "Set Pipewire Metadata",
+  "uuid": "pw_ssr@alanpasi.com",
+  "shell-version": [
+    "45"
+  ]
+}
