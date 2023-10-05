@@ -15,7 +15,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  * 
- * pw_set_sample_rate
+ * pw_ssr (Set Pipewire metadata - Sample Rate and Buffer Size)
  * by Alanpasi - 28/09/2023
  */
 
@@ -25,6 +25,7 @@ import Gio from 'gi://Gio'
 import GLib from 'gi://GLib'
 
 import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
+
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
@@ -32,11 +33,13 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 const Indicator = GObject.registerClass(
     class Indicator extends PanelMenu.Button {
-        _init() {
+        _init(path) {
             super._init(0.0, _('Pipewire Extension'));
-            this.add_child(new St.Icon({
-                gicon: Gio.icon_new_for_string('/home/alanpasi/.local/share/gnome-shell/extensions/pw_ssr@alanpasi.com/pw_icon.png'),
-            }));
+
+            // Define Pipewire Icon
+            this._icon = new St.Icon({ style_class: 'pw_icon' });
+            this._icon.gicon = Gio.icon_new_for_string(`${path}/pw_icon.png`);
+            this.add_child(this._icon);
 
             // Define Label Item Menu 'Sample Rate'
             let pmLabelSR = new PopupMenu.PopupMenuItem('Sample Rate', {
@@ -69,7 +72,6 @@ const Indicator = GObject.registerClass(
             });
             pmLabelBS.sensitive = false;
             this.menu.addMenuItem(pmLabelBS);
-
 
             // Define itens do menu Buffer Size
             let pmBS128 = new PopupMenu.PopupMenuItem('128');
@@ -172,7 +174,7 @@ const Indicator = GObject.registerClass(
 
 export default class IndicatorExtension extends Extension {
     enable() {
-        this._indicator = new Indicator();
+        this._indicator = new Indicator(this.path);
         Main.panel.addToStatusArea(this.uuid, this._indicator);
     }
 
@@ -181,4 +183,3 @@ export default class IndicatorExtension extends Extension {
         this._indicator = null;
     }
 }
-
