@@ -43,19 +43,27 @@ const Indicator = GObject.registerClass(
 
             // Define Label Item Menu 'Sample Rate'
             let pmLabelSR = new PopupMenu.PopupMenuItem('Sample Rate', {
-                style_class: 'preset-submenu-item',
+                style_class: 'preset-submenu-label',
             });
             pmLabelSR.sensitive = false;
             this.menu.addMenuItem(pmLabelSR);
 
             // Define itens do menu Sample Rate
-            let pmSR44 = new PopupMenu.PopupMenuItem('44100 Hz');
+            let pmSR44 = new PopupMenu.PopupMenuItem('44100 Hz', {
+                style_class: 'preset-submenu-item',
+            });
             this.menu.addMenuItem(pmSR44);
-            let pmSR48 = new PopupMenu.PopupMenuItem('48000 Hz');
+            let pmSR48 = new PopupMenu.PopupMenuItem('48000 Hz', {
+                style_class: 'preset-submenu-item',
+            });
             this.menu.addMenuItem(pmSR48);
-            let pmSR88 = new PopupMenu.PopupMenuItem('88000 Hz');
+            let pmSR88 = new PopupMenu.PopupMenuItem('88000 Hz', {
+                style_class: 'preset-submenu-item',
+            });
             this.menu.addMenuItem(pmSR88);
-            let pmSR96 = new PopupMenu.PopupMenuItem('96000 Hz');
+            let pmSR96 = new PopupMenu.PopupMenuItem('96000 Hz', {
+                style_class: 'preset-submenu-item',
+            });
             this.menu.addMenuItem(pmSR96);
 
             // Initial Sample Rate value
@@ -68,23 +76,35 @@ const Indicator = GObject.registerClass(
 
             // Define Label Item Menu 'Buffer Size'
             let pmLabelBS = new PopupMenu.PopupMenuItem('Buffer Size', {
-                style_class: 'preset-submenu-item',
+                style_class: 'preset-submenu-label',
             });
             pmLabelBS.sensitive = false;
             this.menu.addMenuItem(pmLabelBS);
 
             // Define itens do menu Buffer Size
-            let pmBS128 = new PopupMenu.PopupMenuItem('128');
+            let pmBS128 = new PopupMenu.PopupMenuItem('128', {
+                style_class: 'preset-submenu-item',
+            });
             this.menu.addMenuItem(pmBS128);
-            let pmBS256 = new PopupMenu.PopupMenuItem('256');
+            let pmBS256 = new PopupMenu.PopupMenuItem('256', {
+                style_class: 'preset-submenu-item',
+            });
             this.menu.addMenuItem(pmBS256);
-            let pmBS512 = new PopupMenu.PopupMenuItem('512');
+            let pmBS512 = new PopupMenu.PopupMenuItem('512', {
+                style_class: 'preset-submenu-item',
+            });
             this.menu.addMenuItem(pmBS512);
-            let pmBS1024 = new PopupMenu.PopupMenuItem('1024');
+            let pmBS1024 = new PopupMenu.PopupMenuItem('1024', {
+                style_class: 'preset-submenu-item',
+            });
             this.menu.addMenuItem(pmBS1024);
-            let pmBS2048 = new PopupMenu.PopupMenuItem('2048');
+            let pmBS2048 = new PopupMenu.PopupMenuItem('2048', {
+                style_class: 'preset-submenu-item',
+            });
             this.menu.addMenuItem(pmBS2048);
-            let pmBS4096 = new PopupMenu.PopupMenuItem('4096');
+            let pmBS4096 = new PopupMenu.PopupMenuItem('4096', {
+                style_class: 'preset-submenu-item',
+            });
             this.menu.addMenuItem(pmBS4096);
 
             // Initial Buffer Size value

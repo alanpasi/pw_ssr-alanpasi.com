@@ -1,11 +1,16 @@
 /* Add your custom extension styling here */
-.preset-submenu-item {
+.preset-submenu-label {
+    padding-left: 60px;
     color: lightcoral;
     font-size: larger;
     font-weight: bold;
 }
 
+.preset-submenu-item {
+    padding-left: 50px;
+}
+
 .pw_icon {
-    height: 40px;
-    width: 40px;
+    height: 50px;
+    width: 50px;
 }
