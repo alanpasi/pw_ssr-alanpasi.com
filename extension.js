@@ -66,10 +66,6 @@ const Indicator = GObject.registerClass(
             });
             this.menu.addMenuItem(pmSR96);
 
-            // Initial Sample Rate value
-            setSrOrnamentNone();
-            pmSR96.setOrnament(PopupMenu.Ornament.CHECK);
-            GLib.spawn_command_line_sync('pw-metadata -n settings 0 clock.force-rate 96000');
 
             // Separator
             this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
@@ -107,10 +103,6 @@ const Indicator = GObject.registerClass(
             });
             this.menu.addMenuItem(pmBS4096);
 
-            // Initial Buffer Size value
-            setBsOrnamentNone();
-            pmBS2048.setOrnament(PopupMenu.Ornament.CHECK);
-            GLib.spawn_command_line_sync('pw-metadata -n settings 0 clock.force-quantum 2048');
 
             // Separator
             this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
@@ -120,6 +112,8 @@ const Indicator = GObject.registerClass(
                 style_class: 'preset-submenu-restartpw',
             });
             this.menu.addMenuItem(restartPW);
+
+            setInitialValues()
 
             // Set values when clicked
             pmSR44.connect('activate', () => {
@@ -185,11 +179,23 @@ const Indicator = GObject.registerClass(
 
             restartPW.connect('activate', () => {
                 GLib.spawn_command_line_sync('systemctl --user restart wireplumber pipewire pipewire-pulse');
+                setInitialValues()
                 Main.notify(_('Pipewire Service was restarted.'));
             });
 
 
             // Functions
+            function setInitialValues() {
+                // Initial Sample Rate value
+                setSrOrnamentNone();
+                pmSR96.setOrnament(PopupMenu.Ornament.CHECK);
+                GLib.spawn_command_line_sync('pw-metadata -n settings 0 clock.force-rate 96000');
+                // Initial Buffer Size value
+                setBsOrnamentNone();
+                pmBS2048.setOrnament(PopupMenu.Ornament.CHECK);
+                GLib.spawn_command_line_sync('pw-metadata -n settings 0 clock.force-quantum 2048');
+            }
+
             function setSrOrnamentNone() {
                 pmSR44.setOrnament(PopupMenu.Ornament.NONE);
                 pmSR48.setOrnament(PopupMenu.Ornament.NONE);
