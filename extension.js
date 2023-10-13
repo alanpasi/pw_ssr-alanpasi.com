@@ -112,6 +112,15 @@ const Indicator = GObject.registerClass(
             pmBS2048.setOrnament(PopupMenu.Ornament.CHECK);
             GLib.spawn_command_line_sync('pw-metadata -n settings 0 clock.force-quantum 2048');
 
+            // Separator
+            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
+            // Define iten do menu Restart Pipewire Service
+            let restartPW = new PopupMenu.PopupMenuItem('Restart Pipewire Service', {
+                style_class: 'preset-submenu-restartpw',
+            });
+            this.menu.addMenuItem(restartPW);
+
             // Set values when clicked
             pmSR44.connect('activate', () => {
                 GLib.spawn_command_line_sync('pw-metadata -n settings 0 clock.force-rate 44100');
@@ -173,6 +182,12 @@ const Indicator = GObject.registerClass(
                 pmBS4096.setOrnament(PopupMenu.Ornament.CHECK);
                 Main.notify(_('Setting Buffer Size to 4096'));
             });
+
+            restartPW.connect('activate', () => {
+                GLib.spawn_command_line_sync('systemctl --user restart wireplumber pipewire pipewire-pulse');
+                Main.notify(_('Pipewire Service was restarted.'));
+            });
+
 
             // Functions
             function setSrOrnamentNone() {
