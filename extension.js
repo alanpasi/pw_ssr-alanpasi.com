@@ -178,8 +178,8 @@ const Indicator = GObject.registerClass(
             });
 
             restartPW.connect('activate', () => {
-                GLib.spawn_command_line_sync('systemctl --user restart wireplumber pipewire pipewire-pulse');
                 setInitialValues()
+                GLib.spawn_command_line_sync('systemctl --user restart wireplumber pipewire pipewire-pulse');
                 Main.notify(_('Pipewire Service was restarted.'));
             });
 
