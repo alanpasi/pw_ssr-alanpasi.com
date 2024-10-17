@@ -3,6 +3,6 @@
   "description": "Set Pipewire Metadata",
   "uuid": "pw_ssr@alanpasi.com",
   "shell-version": [
-    "45"
+    "45", "46", "47"
   ]
 }
