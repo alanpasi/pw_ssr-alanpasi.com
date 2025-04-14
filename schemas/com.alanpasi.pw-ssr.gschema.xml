@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<schemalist>
+  <schema
+        id="org.gnome.shell.extensions.pw-ssr"
+        path="/org/gnome/shell/extensions/pw-ssr/"
+    >
+    <key name="sample-rate" type="i">
+      <default>48000</default>
+      <summary>Default sample rate</summary>
+      <description>The default sample rate to use for PipeWire</description>
+    </key>
+    <key name="buffer-size" type="i">
+      <default>1024</default>
+      <summary>Default buffer size</summary>
+      <description>The default buffer size to use for PipeWire</description>
+    </key>
+  </schema>
+</schemalist>

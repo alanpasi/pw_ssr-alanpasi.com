@@ -17,6 +17,7 @@
  *
  * pw_ssr (Set Pipewire metadata - Sample Rate and Buffer Size)
  * by Alanpasi - 28/09/2023
+ * Improved version by Claude 3.7 Sonnet Thinking
  */
 
 import GObject from "gi://GObject";
@@ -31,223 +32,337 @@ import {
 
 import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
-
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
+// PipeWire service class to handle all PipeWire operations
+class PipewireService {
+  constructor() {
+    this._currentSampleRate = null;
+    this._currentBufferSize = null;
+    this._updateCurrentSettings();
+  }
+
+  // Get current PipeWire settings
+  _updateCurrentSettings() {
+    try {
+      const [success, stdout] = this._runCommand(
+        "pw-metadata -n settings 0 clock.force-rate",
+      );
+      if (success) {
+        const output = new TextDecoder().decode(stdout).trim();
+        const match = output.match(/"(\d+)"/);
+        if (match && match[1]) {
+          this._currentSampleRate = parseInt(match[1], 10);
+        }
+      }
+
+      const [successBS, stdoutBS] = this._runCommand(
+        "pw-metadata -n settings 0 clock.force-quantum",
+      );
+      if (successBS) {
+        const output = new TextDecoder().decode(stdoutBS).trim();
+        const match = output.match(/"(\d+)"/);
+        if (match && match[1]) {
+          this._currentBufferSize = parseInt(match[1], 10);
+        }
+      }
+    } catch (e) {
+      console.error(`Error getting PipeWire settings: ${e.message}`);
+    }
+
+    // Use default values if couldn't get current settings
+    if (!this._currentSampleRate) this._currentSampleRate = 48000;
+    if (!this._currentBufferSize) this._currentBufferSize = 1024;
+
+    return {
+      sampleRate: this._currentSampleRate,
+      bufferSize: this._currentBufferSize,
+    };
+  }
+
+  // Run command safely and return result
+  _runCommand(command) {
+    try {
+      return GLib.spawn_command_line_sync(command);
+    } catch (e) {
+      console.error(`Error running command "${command}": ${e.message}`);
+      return [false, null];
+    }
+  }
+
+  // Check if PipeWire is running
+  isPipewireRunning() {
+    try {
+      const [success, stdout] = this._runCommand(
+        "systemctl --user is-active pipewire",
+      );
+      if (success) {
+        const output = new TextDecoder().decode(stdout).trim();
+        return output === "active";
+      }
+      return false;
+    } catch (e) {
+      console.error(`Error checking PipeWire status: ${e.message}`);
+      return false;
+    }
+  }
+
+  // Set sample rate
+  setSampleRate(rate) {
+    const [success] = this._runCommand(
+      `pw-metadata -n settings 0 clock.force-rate ${rate}`,
+    );
+    if (success) {
+      this._currentSampleRate = rate;
+      return true;
+    }
+    return false;
+  }
+
+  // Set buffer size
+  setBufferSize(size) {
+    const [success] = this._runCommand(
+      `pw-metadata -n settings 0 clock.force-quantum ${size}`,
+    );
+    if (success) {
+      this._currentBufferSize = size;
+      return true;
+    }
+    return false;
+  }
+
+  // Restart PipeWire service
+  restartService() {
+    return this._runCommand(
+      "systemctl --user restart wireplumber pipewire pipewire-pulse",
+    )[0];
+  }
+
+  // Get current settings
+  getCurrentSettings() {
+    this._updateCurrentSettings();
+    return {
+      sampleRate: this._currentSampleRate,
+      bufferSize: this._currentBufferSize,
+    };
+  }
+}
+
+// Indicator class for the panel
 const Indicator = GObject.registerClass(
   class Indicator extends PanelMenu.Button {
-    _init(path) {
-      super._init(0.0, _("Pipewire Extension"));
+    _init(extension) {
+      super._init(0.0, _("Pipewire Sample Rate and Buffer Size"));
 
-      // Define Pipewire Icon
+      this._extension = extension;
+      this._pipewireService = new PipewireService();
+
+      // Settings
+      this._settings = extension.getSettings();
+
+      // Sample rates and buffer sizes options
+      this._sampleRates = [44100, 48000, 88000, 96000];
+      this._bufferSizes = [128, 256, 512, 1024, 2048, 4096];
+
+      // Menu items references
+      this._srMenuItems = {};
+      this._bsMenuItems = {};
+
+      this._buildUI();
+      this._setupInitialState();
+      this._bindEvents();
+    }
+
+    _buildUI() {
+      // Icon
       this._icon = new St.Icon({ style_class: "pw_icon" });
-      this._icon.gicon = Gio.icon_new_for_string(`${path}/pw_icon.png`);
+      this._icon.gicon = Gio.icon_new_for_string(
+        `${this._extension.path}/pw_icon.png`,
+      );
       this.add_child(this._icon);
 
-      // Define Label Item Menu 'Sample Rate'
-      let pmLabelSR = new PopupMenu.PopupMenuItem("Sample Rate", {
+      // Sample Rate section
+      let pmLabelSR = new PopupMenu.PopupMenuItem(_("Sample Rate"), {
         style_class: "preset-submenu-label",
       });
       pmLabelSR.sensitive = false;
       this.menu.addMenuItem(pmLabelSR);
 
-      // Define itens do menu Sample Rate
-      let pmSR44 = new PopupMenu.PopupMenuItem("44100 Hz", {
-        style_class: "preset-submenu-item",
+      // Sample Rate options
+      this._sampleRates.forEach((rate) => {
+        const menuItem = new PopupMenu.PopupMenuItem(`${rate} Hz`, {
+          style_class: "preset-submenu-item",
+        });
+        this._srMenuItems[rate] = menuItem;
+        this.menu.addMenuItem(menuItem);
       });
-      this.menu.addMenuItem(pmSR44);
-      let pmSR48 = new PopupMenu.PopupMenuItem("48000 Hz", {
-        style_class: "preset-submenu-item",
-      });
-      this.menu.addMenuItem(pmSR48);
-      let pmSR88 = new PopupMenu.PopupMenuItem("88000 Hz", {
-        style_class: "preset-submenu-item",
-      });
-      this.menu.addMenuItem(pmSR88);
-      let pmSR96 = new PopupMenu.PopupMenuItem("96000 Hz", {
-        style_class: "preset-submenu-item",
-      });
-      this.menu.addMenuItem(pmSR96);
 
       // Separator
       this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-      // Define Label Item Menu 'Buffer Size'
-      let pmLabelBS = new PopupMenu.PopupMenuItem("Buffer Size", {
+      // Buffer Size section
+      let pmLabelBS = new PopupMenu.PopupMenuItem(_("Buffer Size"), {
         style_class: "preset-submenu-label",
       });
       pmLabelBS.sensitive = false;
       this.menu.addMenuItem(pmLabelBS);
 
-      // Define itens do menu Buffer Size
-      let pmBS128 = new PopupMenu.PopupMenuItem("128", {
-        style_class: "preset-submenu-item",
+      // Buffer Size options
+      this._bufferSizes.forEach((size) => {
+        const menuItem = new PopupMenu.PopupMenuItem(`${size}`, {
+          style_class: "preset-submenu-item",
+        });
+        this._bsMenuItems[size] = menuItem;
+        this.menu.addMenuItem(menuItem);
       });
-      this.menu.addMenuItem(pmBS128);
-      let pmBS256 = new PopupMenu.PopupMenuItem("256", {
-        style_class: "preset-submenu-item",
-      });
-      this.menu.addMenuItem(pmBS256);
-      let pmBS512 = new PopupMenu.PopupMenuItem("512", {
-        style_class: "preset-submenu-item",
-      });
-      this.menu.addMenuItem(pmBS512);
-      let pmBS1024 = new PopupMenu.PopupMenuItem("1024", {
-        style_class: "preset-submenu-item",
-      });
-      this.menu.addMenuItem(pmBS1024);
-      let pmBS2048 = new PopupMenu.PopupMenuItem("2048", {
-        style_class: "preset-submenu-item",
-      });
-      this.menu.addMenuItem(pmBS2048);
-      let pmBS4096 = new PopupMenu.PopupMenuItem("4096", {
-        style_class: "preset-submenu-item",
-      });
-      this.menu.addMenuItem(pmBS4096);
 
       // Separator
       this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-      // Define item of menu Restart Pipewire Service
-      let restartPW = new PopupMenu.PopupMenuItem("Restart Pipewire Service", {
-        style_class: "preset-submenu-restartpw",
-      });
-      this.menu.addMenuItem(restartPW);
+      // Restart Pipewire Service
+      this._restartMenuItem = new PopupMenu.PopupMenuItem(
+        _("Restart Pipewire Service"),
+        {
+          style_class: "preset-submenu-restartpw",
+        },
+      );
+      this.menu.addMenuItem(this._restartMenuItem);
 
-      setInitialValues();
+      // Status item (optional for showing current values)
+      this._statusMenuItem = new PopupMenu.PopupMenuItem("", {
+        style_class: "preset-submenu-status",
+      });
+      this._statusMenuItem.sensitive = false;
+      this.menu.addMenuItem(this._statusMenuItem);
+    }
 
-      // Set values when clicked
-      pmSR44.connect("activate", () => {
-        GLib.spawn_command_line_sync(
-          "pw-metadata -n settings 0 clock.force-rate 44100",
-        );
-        setSrOrnamentNone();
-        pmSR44.setOrnament(PopupMenu.Ornament.CHECK);
-        Main.notify(_("Setting Sample Rate to 44100 Hz"));
-      });
-      pmSR48.connect("activate", () => {
-        GLib.spawn_command_line_sync(
-          "pw-metadata -n settings 0 clock.force-rate 48000",
-        );
-        setSrOrnamentNone();
-        pmSR48.setOrnament(PopupMenu.Ornament.CHECK);
-        Main.notify(_("Setting Sample Rate to 48000 Hz"));
-      });
-      pmSR88.connect("activate", () => {
-        GLib.spawn_command_line_sync(
-          "pw-metadata -n settings 0 clock.force-rate 88000",
-        );
-        setSrOrnamentNone();
-        pmSR88.setOrnament(PopupMenu.Ornament.CHECK);
-        Main.notify(_("Setting Sample Rate to 88000 Hz"));
-      });
-      pmSR96.connect("activate", () => {
-        GLib.spawn_command_line_sync(
-          "pw-metadata -n settings 0 clock.force-rate 96000",
-        );
-        setSrOrnamentNone();
-        pmSR96.setOrnament(PopupMenu.Ornament.CHECK);
-        Main.notify(_("Setting Sample Rate to 96000 Hz"));
-      });
-      pmBS128.connect("activate", () => {
-        GLib.spawn_command_line_sync(
-          "pw-metadata -n settings 0 clock.force-quantum 128",
-        );
-        setBsOrnamentNone();
-        pmBS128.setOrnament(PopupMenu.Ornament.CHECK);
-        Main.notify(_("Setting Buffer Size to 128"));
-      });
-      pmBS256.connect("activate", () => {
-        GLib.spawn_command_line_sync(
-          "pw-metadata -n settings 0 clock.force-quantum 256",
-        );
-        setBsOrnamentNone();
-        pmBS256.setOrnament(PopupMenu.Ornament.CHECK);
-        Main.notify(_("Setting Buffer Size to 256"));
-      });
-      pmBS512.connect("activate", () => {
-        GLib.spawn_command_line_sync(
-          "pw-metadata -n settings 0 clock.force-quantum 512",
-        );
-        setBsOrnamentNone();
-        pmBS512.setOrnament(PopupMenu.Ornament.CHECK);
-        Main.notify(_("Setting Buffer Size to 512"));
-      });
-      pmBS1024.connect("activate", () => {
-        GLib.spawn_command_line_sync(
-          "pw-metadata -n settings 0 clock.force-quantum 1024",
-        );
-        setBsOrnamentNone();
-        pmBS1024.setOrnament(PopupMenu.Ornament.CHECK);
-        Main.notify(_("Setting Buffer Size to 1024"));
-      });
-      pmBS2048.connect("activate", () => {
-        GLib.spawn_command_line_sync(
-          "pw-metadata -n settings 0 clock.force-quantum 2048",
-        );
-        setBsOrnamentNone();
-        pmBS2048.setOrnament(PopupMenu.Ornament.CHECK);
-        Main.notify(_("Setting Buffer Size to 2048"));
-      });
-      pmBS4096.connect("activate", () => {
-        GLib.spawn_command_line_sync(
-          "pw-metadata -n settings 0 clock.force-quantum 4096",
-        );
-        setBsOrnamentNone();
-        pmBS4096.setOrnament(PopupMenu.Ornament.CHECK);
-        Main.notify(_("Setting Buffer Size to 4096"));
+    _setupInitialState() {
+      // Get current settings
+      const { sampleRate, bufferSize } =
+        this._pipewireService.getCurrentSettings();
+
+      // Update the UI to match current settings
+      this._updateSampleRateUI(sampleRate);
+      this._updateBufferSizeUI(bufferSize);
+      this._updateStatusText();
+    }
+
+    _bindEvents() {
+      // Sample Rate events
+      Object.entries(this._srMenuItems).forEach(([rate, menuItem]) => {
+        menuItem.connect("activate", () => {
+          const rateValue = parseInt(rate, 10);
+          if (this._pipewireService.setSampleRate(rateValue)) {
+            this._updateSampleRateUI(rateValue);
+            this._updateStatusText();
+            Main.notify(_(`Sample Rate set to ${rateValue} Hz`));
+          } else {
+            Main.notify(_("Failed to set Sample Rate"));
+          }
+        });
       });
 
-      restartPW.connect("activate", () => {
-        setInitialValues();
-        GLib.spawn_command_line_sync(
-          "systemctl --user restart wireplumber pipewire pipewire-pulse",
-        );
-        Main.notify(_("Pipewire Service was restarted."));
+      // Buffer Size events
+      Object.entries(this._bsMenuItems).forEach(([size, menuItem]) => {
+        menuItem.connect("activate", () => {
+          const sizeValue = parseInt(size, 10);
+          if (this._pipewireService.setBufferSize(sizeValue)) {
+            this._updateBufferSizeUI(sizeValue);
+            this._updateStatusText();
+            Main.notify(_(`Buffer Size set to ${sizeValue}`));
+          } else {
+            Main.notify(_("Failed to set Buffer Size"));
+          }
+        });
       });
 
-      // Functions
-      function setInitialValues() {
-        // Initial Sample Rate value
-        setSrOrnamentNone();
-        pmSR96.setOrnament(PopupMenu.Ornament.CHECK);
-        GLib.spawn_command_line_sync(
-          "pw-metadata -n settings 0 clock.force-rate 48000",
-        );
-        // Initial Buffer Size value
-        setBsOrnamentNone();
-        pmBS2048.setOrnament(PopupMenu.Ornament.CHECK);
-        GLib.spawn_command_line_sync(
-          "pw-metadata -n settings 0 clock.force-quantum 1024",
-        );
+      // Restart service event
+      this._restartMenuItem.connect("activate", () => {
+        if (this._pipewireService.restartService()) {
+          // Refresh UI after restart
+          GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+            this._setupInitialState();
+            return GLib.SOURCE_REMOVE;
+          });
+          Main.notify(_("Pipewire Service was restarted."));
+        } else {
+          Main.notify(_("Failed to restart Pipewire Service"));
+        }
+      });
+
+      // Refresh settings when menu opens
+      this.menu.connect("open-state-changed", (menu, open) => {
+        if (open) {
+          this._setupInitialState();
+        }
+      });
+    }
+
+    _updateSampleRateUI(rate) {
+      // Clear all check marks
+      Object.values(this._srMenuItems).forEach((item) => {
+        item.setOrnament(PopupMenu.Ornament.NONE);
+      });
+
+      // Set check mark on the selected rate
+      if (this._srMenuItems[rate]) {
+        this._srMenuItems[rate].setOrnament(PopupMenu.Ornament.CHECK);
       }
+    }
 
-      function setSrOrnamentNone() {
-        pmSR44.setOrnament(PopupMenu.Ornament.NONE);
-        pmSR48.setOrnament(PopupMenu.Ornament.NONE);
-        pmSR88.setOrnament(PopupMenu.Ornament.NONE);
-        pmSR96.setOrnament(PopupMenu.Ornament.NONE);
+    _updateBufferSizeUI(size) {
+      // Clear all check marks
+      Object.values(this._bsMenuItems).forEach((item) => {
+        item.setOrnament(PopupMenu.Ornament.NONE);
+      });
+
+      // Set check mark on the selected size
+      if (this._bsMenuItems[size]) {
+        this._bsMenuItems[size].setOrnament(PopupMenu.Ornament.CHECK);
       }
-      function setBsOrnamentNone() {
-        pmBS128.setOrnament(PopupMenu.Ornament.NONE);
-        pmBS256.setOrnament(PopupMenu.Ornament.NONE);
-        pmBS512.setOrnament(PopupMenu.Ornament.NONE);
-        pmBS1024.setOrnament(PopupMenu.Ornament.NONE);
-        pmBS2048.setOrnament(PopupMenu.Ornament.NONE);
-        pmBS4096.setOrnament(PopupMenu.Ornament.NONE);
-      }
+    }
+
+    _updateStatusText() {
+      const { sampleRate, bufferSize } =
+        this._pipewireService.getCurrentSettings();
+      this._statusMenuItem.label.text = _(
+        `Current: ${sampleRate} Hz, Buffer: ${bufferSize}`,
+      );
     }
   },
 );
 
-export default class IndicatorExtension extends Extension {
+// Main extension class
+export default class PipewireSsrExtension extends Extension {
+  constructor(metadata) {
+    super(metadata);
+    this._indicator = null;
+  }
+
   enable() {
-    this._indicator = new Indicator(this.path);
+    this._indicator = new Indicator(this);
     Main.panel.addToStatusArea(this.uuid, this._indicator);
   }
 
   disable() {
-    this._indicator.destroy();
-    this._indicator = null;
+    if (this._indicator) {
+      this._indicator.destroy();
+      this._indicator = null;
+    }
+  }
+
+  getSettings() {
+    // Simple settings implementation
+    // For a full implementation, you would use GSettings schema
+    return {
+      get: (key) => {
+        // Default implementation without persistence
+        return null;
+      },
+      set: (key, value) => {
+        // Default implementation without persistence
+        return;
+      },
+    };
   }
 }

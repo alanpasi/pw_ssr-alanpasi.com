@@ -1,20 +1,22 @@
-/* Add your custom extension styling here */
+.pw_icon {
+    width: 40px;
+    height: 40px;
+}
+
 .preset-submenu-label {
-    padding-left: 60px;
-    color: lightcoral;
-    font-size: larger;
     font-weight: bold;
 }
 
 .preset-submenu-item {
-    padding-left: 55px;
-}
-
-.preset-submenu-restartpw {
     padding-left: 20px;
 }
 
-.pw_icon {
-    height: 50px;
-    width: 50px;
+.preset-submenu-restartpw {
+    color: #e74c3c;
+    font-weight: bold;
+}
+
+.preset-submenu-status {
+    font-size: 0.9em;
+    color: rgba(255, 255, 255, 0.7);
 }

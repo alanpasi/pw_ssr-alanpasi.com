@@ -1,0 +1,20 @@
+/* Add your custom extension styling here */
+.preset-submenu-label {
+    padding-left: 60px;
+    color: lightcoral;
+    font-size: larger;
+    font-weight: bold;
+}
+
+.preset-submenu-item {
+    padding-left: 55px;
+}
+
+.preset-submenu-restartpw {
+    padding-left: 20px;
+}
+
+.pw_icon {
+    height: 50px;
+    width: 50px;
+}
