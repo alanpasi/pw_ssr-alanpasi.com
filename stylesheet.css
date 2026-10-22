@@ -5,18 +5,23 @@
 
 .preset-submenu-label {
     font-weight: bold;
+    color: orange;
+    text-align: center;
 }
 
 .preset-submenu-item {
     padding-left: 20px;
+    text-align: center;
 }
 
 .preset-submenu-restartpw {
     color: #e74c3c;
     font-weight: bold;
+    text-align: center;
 }
 
 .preset-submenu-status {
     font-size: 0.9em;
     color: rgba(255, 255, 255, 0.7);
+    text-align: center;
 }

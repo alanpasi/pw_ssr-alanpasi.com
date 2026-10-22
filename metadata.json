@@ -2,6 +2,6 @@
   "name": "Pipewire extension",
   "description": "Set Pipewire Metadata",
   "uuid": "pw_ssr@alanpasi.com",
-  "shell-version": ["45", "46", "47", "48"],
+  "shell-version": ["45", "46", "47", "48", "49", "50", "51"],
   "settings-schema": "com.alanpasi.pw_ssr"
 }
